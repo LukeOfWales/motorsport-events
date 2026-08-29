@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Motorsport Events</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Motorsport Events</h1>
+    <p class="subtitle" id="home-label">near CF10 1EP</p>
+  </header>
+
+  <section class="summary" id="summary" hidden>
+    <div class="summary-card" id="summary-total"></div>
+    <div class="summary-card" id="summary-nearest"></div>
+  </section>
+
+  <section class="controls">
+    <div class="control">
+      <label for="postcode">Your postcode</label>
+      <form id="postcode-form" class="postcode-row">
+        <input id="postcode" type="text" inputmode="text" autocomplete="postal-code"
+               placeholder="e.g. CF10 1EP" aria-label="Your postcode" />
+        <button type="submit">Set</button>
+      </form>
+      <span id="postcode-status" class="postcode-status"></span>
+    </div>
+    <div class="control">
+      <label for="view">View</label>
+      <select id="view">
+        <option value="list">List</option>
+        <option value="month">Month</option>
+      </select>
+    </div>
+    <div class="control">
+      <label for="radius">Within (km)</label>
+      <select id="radius">
+        <option value="">Any distance</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="150" selected>150</option>
+        <option value="300">300</option>
+      </select>
+    </div>
+    <div class="control control-disciplines">
+      <label>Disciplines</label>
+      <div id="disciplines" class="chips"></div>
+    </div>
+    <div class="control control-disciplines">
+      <label>Sources</label>
+      <div id="sources" class="chips"></div>
+    </div>
+  </section>
+
+  <main id="content" aria-live="polite"></main>
+
+  <footer>
+    <p>Local motorsport event aggregator · data refreshed via <code>python -m app.ingest</code></p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
