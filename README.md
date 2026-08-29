@@ -103,10 +103,15 @@ adapter can read them via `os.environ`. Never commit credentials.
 
 ## API
 
-- `GET /api/events?start=&end=&discipline=&max_distance_km=` — filtered events
-- `GET /api/summary?days=30` — count by discipline + nearest upcoming event
+- `GET /api/events?start=&end=&discipline=&source=&max_distance_km=&postcode=&search=&weekend=&per_discipline_radius=` — filtered events (each carries `is_new`)
+- `GET /api/events.ics?...` — subscribable iCalendar feed of the filtered events
+- `GET /api/event/{source}/{source_id}.ics` — single-event calendar download
+- `GET /api/summary?days=30&postcode=` — count by discipline + nearest upcoming event
+- `GET /api/geocode?postcode=` — resolve a postcode to coordinates (cached)
+- `GET /api/health` — per-source ingest status/freshness and total event count
 - `GET /api/disciplines` — discipline list for the UI
-- `GET /api/config` — home location and default radius
+- `GET /api/sources` — sources that currently have upcoming events
+- `GET /api/config` — home location, default radius, per-discipline radii
 
 ## Project layout
 

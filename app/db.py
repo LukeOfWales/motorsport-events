@@ -69,6 +69,22 @@ def connect() -> Iterator[duckdb.DuckDBPyConnection]:
 def init_db() -> None:
     with connect() as conn:
         conn.execute(SCHEMA)
+        _migrate(conn)
+
+
+def _migrate(conn) -> None:
+    """Lightweight, idempotent migrations for pre-existing databases.
+
+    Adds columns/tables introduced after the initial schema. Safe to run on
+    every startup. (A full migration framework is overkill for a rebuildable
+    local DB, but this keeps existing .duckdb files working after upgrades.)
+    """
+    cols = {row[0] for row in conn.execute(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'events'"
+    ).fetchall()}
+    if "first_seen" not in cols:
+        conn.execute("ALTER TABLE events ADD COLUMN first_seen TIMESTAMP")
 
 
 # Column order used everywhere we read a full event row.
@@ -160,6 +176,7 @@ def query_events(
     origin: Optional[tuple[float, float]] = None,
     search: Optional[str] = None,
     weekend_only: bool = False,
+    discipline_radius: Optional[dict[str, float]] = None,
     dedupe: bool = True,
 ) -> list[Event]:
     """Query events, optionally ranked/filtered by distance from `origin`.
@@ -225,6 +242,18 @@ def query_events(
                 e for e in events
                 if e.distance_km is not None and e.distance_km <= max_distance_km
             ]
+
+    # Per-discipline radius: keep an event only if it's within its discipline's
+    # own limit. Events with unknown distance are dropped (can't be "near").
+    if discipline_radius:
+        kept = []
+        for e in events:
+            limit = discipline_radius.get(e.discipline.value)
+            if limit is None:
+                kept.append(e)
+            elif e.distance_km is not None and e.distance_km <= limit:
+                kept.append(e)
+        events = kept
 
     if dedupe:
         events = _dedupe(events)

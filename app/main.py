@@ -4,20 +4,31 @@ Run with:  uvicorn app.main:app --reload
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from contextlib import asynccontextmanager
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
 import httpx
 from fastapi import FastAPI, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import config, db, geo
 from .adapters import all_sources
-from .models import Discipline
+from .ics import build_ics as _build_ics
+from .models import Discipline, Event
 
-app = FastAPI(title="Motorsport Events")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure schema/migrations are applied even if the server starts before
+    # the first ingest run.
+    db.init_db()
+    yield
+
+
+app = FastAPI(title="Motorsport Events", lifespan=lifespan)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -64,6 +75,16 @@ def app_config() -> dict:
         "home_lat": config.HOME_LAT,
         "home_lon": config.HOME_LON,
         "default_radius_km": config.DEFAULT_RADIUS_KM,
+        "discipline_radius_km": config.DISCIPLINE_RADIUS_KM,
+    }
+
+
+@app.get("/api/health")
+def health() -> dict:
+    """Per-source ingest status and freshness, for the data-health view."""
+    return {
+        "sources": db.latest_ingest_status(),
+        "total_events": db.count_events(),
     }
 
 
@@ -82,6 +103,56 @@ def geocode(postcode: str = Query(..., description="UK postcode or outcode")) ->
     }
 
 
+def _query_from_params(
+    start, end, discipline, source, max_distance_km, postcode, search, weekend,
+    per_discipline_radius=False,
+):
+    """Shared query builder used by both the JSON and ICS event endpoints."""
+    if start is None:
+        start = date.today()
+    origin = _resolve_origin(postcode)
+    disc_radius = None
+    if per_discipline_radius:
+        disc_radius = config.DISCIPLINE_RADIUS_KM
+        # Per-discipline filtering needs distances; use home origin if the user
+        # hasn't set one, and ignore the single max_distance_km slider.
+        if origin is None:
+            origin = (config.HOME_LAT, config.HOME_LON)
+        max_distance_km = None
+    rows = db.query_events(
+        start=start,
+        end=end,
+        disciplines=discipline,
+        sources=source,
+        max_distance_km=max_distance_km,
+        origin=origin,
+        search=search,
+        weekend_only=weekend,
+        discipline_radius=disc_radius,
+    )
+    return rows
+
+
+# Events first seen within this window are flagged "new" in the UI.
+NEW_WINDOW = timedelta(days=7)
+
+
+def _mark_new(rows: list[Event]) -> list[dict]:
+    cutoff = datetime.now().astimezone() - NEW_WINDOW
+    out = []
+    for e in rows:
+        d = e.model_dump(mode="json")
+        is_new = False
+        if e.first_seen is not None:
+            fs = e.first_seen
+            if fs.tzinfo is None:
+                fs = fs.astimezone()
+            is_new = fs >= cutoff
+        d["is_new"] = is_new
+        out.append(d)
+    return out
+
+
 @app.get("/api/events")
 def events(
     start: Optional[date] = Query(None, description="Earliest date (default: today)"),
@@ -90,23 +161,56 @@ def events(
     source: Optional[list[str]] = Query(None),
     max_distance_km: Optional[float] = Query(None),
     postcode: Optional[str] = Query(None, description="Origin postcode for distance"),
+    search: Optional[str] = Query(None, description="Free-text title/venue/organiser"),
+    weekend: bool = Query(False, description="Only events on/spanning a weekend"),
+    per_discipline_radius: bool = Query(False, description="Use per-discipline radii"),
 ) -> dict:
-    if start is None:
-        start = date.today()
-    origin = _resolve_origin(postcode)
-    rows = db.query_events(
-        start=start,
-        end=end,
-        disciplines=discipline,
-        sources=source,
-        max_distance_km=max_distance_km,
-        origin=origin,
+    rows = _query_from_params(
+        start, end, discipline, source, max_distance_km, postcode, search, weekend,
+        per_discipline_radius,
     )
     return {
         "count": len(rows),
         "origin_postcode": geo.normalise_postcode(postcode) if postcode else None,
-        "events": [e.model_dump(mode="json") for e in rows],
+        "events": _mark_new(rows),
     }
+
+
+@app.get("/api/events.ics")
+def events_ics(
+    start: Optional[date] = Query(None),
+    end: Optional[date] = Query(None),
+    discipline: Optional[list[str]] = Query(None),
+    source: Optional[list[str]] = Query(None),
+    max_distance_km: Optional[float] = Query(None),
+    postcode: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    weekend: bool = Query(False),
+) -> Response:
+    """Subscribable iCalendar feed of the current (filtered) events.
+
+    Point a calendar app at this URL (with the same query params as the UI) to
+    keep an always-updating subscription of matching events.
+    """
+    rows = _query_from_params(
+        start, end, discipline, source, max_distance_km, postcode, search, weekend,
+    )
+    ics = _build_ics(rows, name="Motorsport Events")
+    return Response(content=ics, media_type="text/calendar",
+                    headers={"Content-Disposition": "inline; filename=motorsport-events.ics"})
+
+
+@app.get("/api/event/{source}/{source_id}.ics")
+def event_ics(source: str, source_id: str) -> Response:
+    """Single-event iCalendar file (the per-event 'add to calendar' link)."""
+    rows = db.query_events(start=date(2000, 1, 1), sources=[source], dedupe=False)
+    match = [e for e in rows if e.source_id == source_id]
+    if not match:
+        return Response(status_code=404, content="Not found")
+    ics = _build_ics(match[:1], name=match[0].title)
+    fname = f"{source}-{source_id}.ics".replace("/", "-")
+    return Response(content=ics, media_type="text/calendar",
+                    headers={"Content-Disposition": f"attachment; filename={fname}"})
 
 
 @app.get("/api/summary")

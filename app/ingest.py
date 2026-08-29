@@ -82,4 +82,6 @@ if __name__ == "__main__":
         format="%(asctime)s  %(levelname)-7s %(message)s",
         datefmt="%H:%M:%S",
     )
+    # Quiet the very chatty httpx per-request logs.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     run()

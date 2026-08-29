@@ -20,6 +20,18 @@ HOME_LON = float(os.environ.get("MSE_HOME_LON", "-3.1791"))
 # Default "near me" radius in km.
 DEFAULT_RADIUS_KM = float(os.environ.get("MSE_RADIUS_KM", "150"))
 
+# Optional per-discipline radius overrides (km). You'll travel further for a
+# championship rally than a local trial. When a discipline isn't listed, the
+# request's radius (or DEFAULT_RADIUS_KM) applies. Applied server-side only
+# when the client asks for it (per_discipline_radius=true).
+DISCIPLINE_RADIUS_KM = {
+    "rally": 300,
+    "hillclimb": 200,
+    "off_road": 200,
+    "trials": 100,
+    "other": 150,
+}
+
 # Polite HTTP defaults for scrapers.
 USER_AGENT = os.environ.get(
     "MSE_USER_AGENT",

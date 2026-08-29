@@ -215,3 +215,73 @@ def test_replace_source_events_empty_is_noop(db):
     written = db.replace_source_events("s", [])
     assert written == 0
     assert db.count_events() == 1
+
+
+def test_search_matches_title_venue_organiser(db):
+    from app.models import Discipline, Event
+    db.upsert_events([
+        Event(source="s", source_id="1", title="Wyedean Rally",
+              discipline=Discipline.RALLY, start_date=date(2026, 9, 1),
+              venue="Chepstow", organiser="Quinton MC"),
+        Event(source="s", source_id="2", title="Trial",
+              discipline=Discipline.TRIALS, start_date=date(2026, 9, 2),
+              venue="Walters Arena", organiser="AWDC"),
+    ])
+    assert len(db.query_events(start=date(2026, 1, 1), search="wyedean")) == 1
+    assert len(db.query_events(start=date(2026, 1, 1), search="walters")) == 1
+    assert len(db.query_events(start=date(2026, 1, 1), search="awdc")) == 1
+    assert len(db.query_events(start=date(2026, 1, 1), search="zzz")) == 0
+
+
+def test_weekend_only_filter(db):
+    # 2026-09-05 is a Saturday; 2026-09-08 is a Tuesday.
+    db.upsert_events([
+        _event(db, "s", "sat", "Sat event", "other", date(2026, 9, 5)),
+        _event(db, "s", "tue", "Tue event", "other", date(2026, 9, 8)),
+    ])
+    rows = db.query_events(start=date(2026, 1, 1), weekend_only=True)
+    assert [e.source_id for e in rows] == ["sat"]
+
+
+def test_weekend_only_multiday_spanning_weekend(db):
+    # Fri 4 -> Mon 7 Sep 2026 spans a weekend.
+    from app.models import Discipline, Event
+    db.upsert_events([
+        Event(source="s", source_id="span", title="Long", discipline=Discipline.OTHER,
+              start_date=date(2026, 9, 4), end_date=date(2026, 9, 7)),
+    ])
+    assert len(db.query_events(start=date(2026, 1, 1), weekend_only=True)) == 1
+
+
+def test_first_seen_set_and_preserved(db):
+    ev = _event(db, "s", "1", "Event", "other", date(2026, 9, 1))
+    db.upsert_events([ev])
+    first = db.query_events(start=date(2026, 1, 1), dedupe=False)[0].first_seen
+    assert first is not None
+    # Re-ingest the same uid; first_seen must not change.
+    db.upsert_events([_event(db, "s", "1", "Event renamed", "other", date(2026, 9, 1))])
+    again = db.query_events(start=date(2026, 1, 1), dedupe=False)[0].first_seen
+    assert again == first
+
+
+def test_discipline_radius_filter(db):
+    from app.models import Discipline, Event
+    # Rally far away (kept, big radius) vs trial far away (dropped, small radius).
+    rally = Event(source="s", source_id="r", title="Far Rally", discipline=Discipline.RALLY,
+                  start_date=date(2026, 9, 1), latitude=53.8, longitude=-1.55)
+    trial = Event(source="s", source_id="t", title="Far Trial", discipline=Discipline.TRIALS,
+                  start_date=date(2026, 9, 2), latitude=53.8, longitude=-1.55)
+    db.upsert_events([rally, trial])
+    origin = (51.4816, -3.1791)  # ~250km from Leeds coords above
+    rows = db.query_events(start=date(2026, 1, 1), origin=origin,
+                           discipline_radius={"rally": 300, "trials": 100})
+    ids = {e.source_id for e in rows}
+    assert "r" in ids and "t" not in ids
+
+
+def test_ingest_run_log(db):
+    db.record_ingest_run("s1", ok=True, event_count=5)
+    db.record_ingest_run("s2", ok=False, event_count=0, error="boom")
+    status = {s["source"]: s for s in db.latest_ingest_status()}
+    assert status["s1"]["ok"] is True and status["s1"]["event_count"] == 5
+    assert status["s2"]["ok"] is False and status["s2"]["error"] == "boom"
