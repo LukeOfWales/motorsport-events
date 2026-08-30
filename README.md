@@ -240,3 +240,13 @@ data/
   geocache.json      cached postcode lookups (git-ignored)
   first_seen.json    first-seen dates for "new" badges (git-ignored)
 ```
+
+## License
+
+Code is released under the [MIT License](LICENSE) — use, modify and
+redistribute freely, with attribution and no warranty.
+
+Note: the license covers this project's **code**, not the event data it
+aggregates. Event listings are fetched from third-party sources (clubs, series
+and venues) and remain the property of those sites, subject to their own terms.
+The built `events.json` is provided for personal use.
