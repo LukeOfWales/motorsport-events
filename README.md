@@ -4,8 +4,7 @@ Find upcoming UK motorsport events — **rally, trials/RTV, hill climbs, off-roa
 and circuit racing** — aggregated from many sources into one calendar and
 ranked by distance from your postcode.
 
-> **Live site:** _enable GitHub Pages (Settings → Pages → Source: GitHub
-> Actions), then add the URL here._
+> **Live site:** https://lukeofwales.github.io/motorsport-events/
 
 ![Motorsport Events](docs/screenshot.png)
 
