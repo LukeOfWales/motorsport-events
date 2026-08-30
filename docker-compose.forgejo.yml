@@ -54,10 +54,11 @@ services:
     # spawn job containers). Without this the daemon gets 'permission denied'
     # pinging /var/run/docker.sock.
     user: root
-    entrypoint: ["forgejo-runner", "daemon"]
+    entrypoint: ["forgejo-runner", "daemon", "--config", "/config.yaml"]
     # The runner needs the host Docker socket to spawn job containers.
     volumes:
       - ./.forgejo-runner:/data
+      - ./forgejo-runner.yaml:/config.yaml:ro
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 

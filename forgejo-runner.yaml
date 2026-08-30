@@ -1,0 +1,19 @@
+# Forgejo runner config. Mounted into the runner container.
+# The main lever here is log.job_level, which surfaces per-job output and
+# pass/fail in `make forgejo-logs` (otherwise the runner is quiet about
+# outcomes and you have to check the Forgejo web UI).
+log:
+  level: info
+  job_level: debug
+
+runner:
+  file: /data/.runner
+  capacity: 1
+  timeout: 1h
+  fetch_interval: 2s
+
+container:
+  # Let job containers reach the Forgejo instance on the compose network.
+  network: forgejo
+  # Auto-remove finished job containers.
+  valid_volumes: []
