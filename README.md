@@ -7,9 +7,7 @@ ranked by distance from your postcode.
 > **Live site:** _enable GitHub Pages (Settings → Pages → Source: GitHub
 > Actions), then add the URL here._
 
-<!-- Add a screenshot to make this pop:
-     ![Motorsport Events](docs/screenshot.png) -->
-_Screenshot: run the SPA locally (below) and drop a `docs/screenshot.png` in._
+![Motorsport Events](docs/screenshot.png)
 
 ## Features
 
