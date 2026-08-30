@@ -18,6 +18,7 @@ const state = {
   smartRadius: false,
   view: "list",
   monthCursor: null,
+  map: null,             // live Leaflet map instance (destroyed between renders)
 };
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -32,6 +33,39 @@ const SOURCE_LABELS = {
 };
 function disciplineLabel(v) { return DISCIPLINE_LABELS[v] || v; }
 function sourceLabel(v) { return SOURCE_LABELS[v] || v; }
+
+// --- URL state (deep-linkable filters/view/postcode) --------------------
+// Reflect the current filters in the query string so views are bookmarkable
+// and shareable, and restore them on load.
+function syncUrl() {
+  const p = new URLSearchParams();
+  if (state.view !== "list") p.set("view", state.view);
+  if (state.postcode) p.set("pc", state.postcode);
+  if (state.smartRadius) p.set("smart", "1");
+  else if (state.radius && String(state.radius) !== String(state.data.default_radius_km))
+    p.set("radius", state.radius);
+  if (state.search) p.set("q", state.search);
+  if (state.weekend) p.set("weekend", "1");
+  if (state.savedOnly) p.set("saved", "1");
+  if (state.activeDisciplines.size) p.set("disc", [...state.activeDisciplines].join(","));
+  if (state.activeSources.size) p.set("src", [...state.activeSources].join(","));
+  const qs = p.toString();
+  const url = qs ? `?${qs}` : location.pathname;
+  history.replaceState(null, "", url);
+}
+
+function readUrl() {
+  const p = new URLSearchParams(location.search);
+  if (p.get("view")) state.view = p.get("view");
+  if (p.get("pc")) state.postcode = normalisePostcode(p.get("pc"));
+  if (p.get("smart") === "1") state.smartRadius = true;
+  if (p.get("radius")) state.radius = p.get("radius");
+  if (p.get("q")) state.search = p.get("q");
+  if (p.get("weekend") === "1") state.weekend = true;
+  if (p.get("saved") === "1") state.savedOnly = true;
+  if (p.get("disc")) state.activeDisciplines = new Set(p.get("disc").split(",").filter(Boolean));
+  if (p.get("src")) state.activeSources = new Set(p.get("src").split(",").filter(Boolean));
+}
 
 // --- saved events -------------------------------------------------------
 const SAVED_KEY = "mse.saved";
@@ -285,16 +319,33 @@ function downloadICS(ev) {
 // --- views --------------------------------------------------------------
 function render() {
   const events = visibleEvents();
+  // Leaving map view: destroy the live map so it doesn't leak.
+  if (state.view !== "map") destroyMap();
   if (state.view === "month") renderMonth(events);
   else if (state.view === "map") renderMap(events);
   else renderList(events);
+  renderResultCount(events);
   renderSummary();
+  syncUrl();
+}
+
+function renderResultCount(events) {
+  const el = document.getElementById("result-count");
+  if (!el) return;
+  const n = events.length;
+  el.textContent = n === 1 ? "1 event" : `${n} events`;
 }
 
 function emptyMsg() {
-  return state.savedOnly
-    ? `<p class="empty-msg">No saved events match your filters.</p>`
-    : `<p class="empty-msg">No events match your filters.<br>Try widening the distance or clearing the search.</p>`;
+  if (state.savedOnly) return `<p class="empty-msg">No saved events match your filters.</p>`;
+  const hints = [];
+  if (state.radius && !state.smartRadius) hints.push("widening the distance");
+  if (state.search) hints.push("clearing the search");
+  if (state.activeSources.size) hints.push("removing the source filter");
+  if (state.activeDisciplines.size) hints.push("removing a discipline filter");
+  if (state.weekend) hints.push("turning off weekends-only");
+  const tip = hints.length ? `Try ${hints.slice(0, 2).join(" or ")}.` : "Try broadening your filters.";
+  return `<p class="empty-msg">No events match your filters.<br>${tip}</p>`;
 }
 
 function renderList(events) {
@@ -389,38 +440,79 @@ function renderMonth(events) {
   }
 }
 
+// --- Leaflet: loaded lazily only when the map view is first used ----------
+let _leafletPromise = null;
+function loadLeaflet() {
+  if (window.L) return Promise.resolve();
+  if (_leafletPromise) return _leafletPromise;
+  _leafletPromise = new Promise((resolve, reject) => {
+    const css = document.createElement("link");
+    css.rel = "stylesheet";
+    css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    css.integrity = "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=";
+    css.crossOrigin = "";
+    document.head.appendChild(css);
+    const js = document.createElement("script");
+    js.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    js.integrity = "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=";
+    js.crossOrigin = "";
+    js.onload = () => resolve();
+    js.onerror = () => reject(new Error("Failed to load the map library."));
+    document.head.appendChild(js);
+  });
+  return _leafletPromise;
+}
+
+// Tear down any live map before we replace #content, to avoid Leaflet leaks
+// and "container already initialized" errors.
+function destroyMap() {
+  if (state.map) {
+    state.map.remove();
+    state.map = null;
+  }
+}
+
 function renderMap(events) {
   const content = document.getElementById("content");
   content.innerHTML = `<div id="map"></div>`;
   const located = events.filter((e) => e.latitude != null && e.longitude != null);
-  const map = L.map(document.getElementById("map"));
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 18, attribution: "&copy; OpenStreetMap contributors",
-  }).addTo(map);
-  const markers = [];
-  for (const ev of located) {
-    const m = L.marker([ev.latitude, ev.longitude]);
-    const dist = ev.distance_km != null ? ` \u00b7 ${Math.round(ev.distance_km)} km` : "";
-    m.bindPopup(`<strong>${escapeHtml(ev.title)}</strong><br>${fmtDateRange(ev.start_date, ev.end_date)}${dist}<br><a href="#" class="popup-more">details</a>`);
-    m.on("popupopen", (e) => {
-      const link = e.popup.getElement().querySelector(".popup-more");
-      if (link) link.addEventListener("click", (ev2) => { ev2.preventDefault(); openDetail(ev); });
-    });
-    m.addTo(map); markers.push(m);
-  }
-  if (state.origin) {
-    L.circleMarker([state.origin.lat, state.origin.lon],
-      { radius: 7, color: "#ff5a1f", fillOpacity: 0.9 }).bindPopup("You are here").addTo(map);
-  }
-  if (markers.length) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.2));
-  else if (state.origin) map.setView([state.origin.lat, state.origin.lon], 9);
-  else map.setView([52.5, -3.5], 6);
-  setTimeout(() => map.invalidateSize(), 100);
-  if (!located.length) {
-    const p = document.createElement("p");
-    p.className = "empty-msg"; p.textContent = "No mappable events match your filters.";
-    content.appendChild(p);
-  }
+
+  loadLeaflet().then(() => {
+    // The user may have navigated away while Leaflet loaded.
+    if (state.view !== "map") return;
+    destroyMap();
+    const map = L.map(document.getElementById("map"));
+    state.map = map;
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18, attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+    const markers = [];
+    for (const ev of located) {
+      const m = L.marker([ev.latitude, ev.longitude]);
+      const dist = ev.distance_km != null ? ` \u00b7 ${Math.round(ev.distance_km)} km` : "";
+      m.bindPopup(`<strong>${escapeHtml(ev.title)}</strong><br>${fmtDateRange(ev.start_date, ev.end_date)}${dist}<br><a href="#" class="popup-more">details</a>`);
+      m.on("popupopen", (e) => {
+        const link = e.popup.getElement().querySelector(".popup-more");
+        if (link) link.addEventListener("click", (ev2) => { ev2.preventDefault(); openDetail(ev); });
+      });
+      m.addTo(map); markers.push(m);
+    }
+    if (state.origin) {
+      L.circleMarker([state.origin.lat, state.origin.lon],
+        { radius: 7, color: "#ff5a1f", fillOpacity: 0.9 }).bindPopup("You are here").addTo(map);
+    }
+    if (markers.length) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.2));
+    else if (state.origin) map.setView([state.origin.lat, state.origin.lon], 9);
+    else map.setView([52.5, -3.5], 6);
+    setTimeout(() => map.invalidateSize(), 100);
+    if (!located.length) {
+      const p = document.createElement("p");
+      p.className = "empty-msg"; p.textContent = "No mappable events match your filters.";
+      content.appendChild(p);
+    }
+  }).catch((err) => {
+    content.innerHTML = `<p class="empty-msg">${escapeHtml(err.message)}</p>`;
+  });
 }
 
 function shiftMonth(delta) {
@@ -457,9 +549,12 @@ function chipRow(boxId, items, activeSet, labelFn) {
   const box = document.getElementById(boxId);
   box.innerHTML = "";
   for (const v of items) {
-    const chip = document.createElement("span");
-    chip.className = "chip" + (activeSet.has(v) ? " active" : "");
+    const active = activeSet.has(v);
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (active ? " active" : "");
     chip.textContent = labelFn(v);
+    chip.setAttribute("aria-pressed", active ? "true" : "false");
     chip.addEventListener("click", () => {
       if (activeSet.has(v)) activeSet.delete(v); else activeSet.add(v);
       chipRow(boxId, items, activeSet, labelFn);
@@ -528,6 +623,9 @@ async function init() {
   document.getElementById("radius").value = String(state.data.default_radius_km);
   state.radius = String(state.data.default_radius_km);
 
+  // Restore state from the URL (deep links) before building the UI.
+  readUrl();
+
   // Disciplines/sources present in the data.
   const disciplines = [...new Set(state.events.map((e) => e.discipline))]
     .sort((a, b) => disciplineLabel(a).localeCompare(disciplineLabel(b)));
@@ -535,8 +633,17 @@ async function init() {
   chipRow("disciplines", disciplines, state.activeDisciplines, disciplineLabel);
   chipRow("sources", sources, state.activeSources, sourceLabel);
 
-  // Restore postcode.
-  const saved = localStorage.getItem(POSTCODE_KEY) || "";
+  // Reflect restored control state in the widgets.
+  document.getElementById("view").value = state.view;
+  document.getElementById("radius").value = state.radius;
+  document.getElementById("radius").disabled = state.smartRadius;
+  document.getElementById("search").value = state.search;
+  document.getElementById("toggle-weekend").classList.toggle("active", state.weekend);
+  document.getElementById("toggle-saved").classList.toggle("active", state.savedOnly);
+  document.getElementById("toggle-smart").classList.toggle("active", state.smartRadius);
+
+  // Restore postcode: URL takes priority, then localStorage, then home.
+  const saved = state.postcode || localStorage.getItem(POSTCODE_KEY) || "";
   const pcInput = document.getElementById("postcode");
   if (saved) {
     pcInput.value = saved;

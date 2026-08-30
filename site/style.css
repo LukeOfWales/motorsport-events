@@ -135,6 +135,12 @@ main {
   padding: 0 1rem 3rem;
 }
 
+.resultbar {
+  max-width: 900px;
+  margin: 0.25rem auto 0;
+  padding: 0 1rem;
+}
+.result-count { color: var(--muted); font-size: 0.82rem; }
 /* List view */
 .event {
   display: flex;
