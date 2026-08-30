@@ -32,6 +32,7 @@ dev = [
 [project.scripts]
 mse-ingest = "app.ingest:run"
 mse-scheduler = "app.scheduler:main"
+mse-build-site = "app.build_site:build"
 
 [tool.setuptools]
 packages = ["app", "app.adapters"]
@@ -47,7 +48,6 @@ omit = [
     "app/main.py",
     "app/scheduler.py",
 ]
-
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",

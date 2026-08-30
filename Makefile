@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f docker-compose.forgejo.yml
 
-.PHONY: help install hooks test ingest scheduler serve \
+.PHONY: help install hooks test ingest scheduler serve build-site serve-site \
         forgejo-up forgejo-register forgejo-runner forgejo-logs forgejo-down forgejo-status
 
 help:  ## Show this help
@@ -32,6 +32,12 @@ scheduler:  ## Run the auto-refresh scheduler (foreground)
 
 serve:  ## Run the web app (http://localhost:8000)
 	. .venv/bin/activate && uvicorn app.main:app --reload
+
+build-site:  ## Build the static SPA data (site/events.json)
+	. .venv/bin/activate && python -m app.build_site
+
+serve-site:  ## Preview the static SPA (http://localhost:8200)
+	cd site && python3 -m http.server 8200
 
 ## --- local Forgejo CI ----------------------------------------------------
 

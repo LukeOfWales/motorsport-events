@@ -13,6 +13,7 @@ from typing import Iterable, Iterator, Optional
 import duckdb
 
 from . import config
+from .dedupe import dedupe as _dedupe, spans_weekend as _spans_weekend
 from .models import Discipline, Event
 
 SCHEMA = """
@@ -262,61 +263,7 @@ def query_events(
     return events
 
 
-# Source preference for dedup: discipline-specific clubs win over the generic
-# aggregators, since their titles/venues are cleaner. Lower index = preferred.
-_SOURCE_PRIORITY = ["awdc", "alrc", "swlrc", "hillclimb_uk", "msv", "msuk"]
-
-
-def _source_rank(source: str) -> int:
-    try:
-        return _SOURCE_PRIORITY.index(source)
-    except ValueError:
-        return len(_SOURCE_PRIORITY)
-
-
-def _spans_weekend(e: Event) -> bool:
-    """True if the event falls on or spans a Saturday or Sunday."""
-    from datetime import timedelta
-    end = e.end_date or e.start_date
-    d = e.start_date
-    while d <= end:
-        if d.weekday() >= 5:  # 5=Sat, 6=Sun
-            return True
-        d += timedelta(days=1)
-    return False
-
-
-def _dedupe(events: list[Event]) -> list[Event]:
-    """Collapse the same real-world event listed by multiple sources.
-
-    Two events are considered duplicates when they share a start date and a
-    normalised postcode. Events without a postcode are never merged (we can't
-    be confident they're the same). The preferred source (see _SOURCE_PRIORITY)
-    is kept; the others are recorded in `alt_sources`.
-    """
-    groups: dict[tuple, list[Event]] = {}
-    singles: list[Event] = []
-    for e in events:
-        if not e.postcode:
-            singles.append(e)
-            continue
-        key = (e.start_date, e.postcode.replace(" ", "").upper())
-        groups.setdefault(key, []).append(e)
-
-    merged: list[Event] = []
-    for key, group in groups.items():
-        if len(group) == 1:
-            merged.append(group[0])
-            continue
-        group.sort(key=lambda e: _source_rank(e.source))
-        primary = group[0]
-        alts = sorted({e.source for e in group[1:]} - {primary.source})
-        primary.alt_sources = alts
-        merged.append(primary)
-
-    result = merged + singles
-    result.sort(key=lambda e: (e.start_date, e.distance_km if e.distance_km is not None else 1e9))
-    return result
+# Dedup / weekend logic lives in app.dedupe (shared with the static build).
 
 
 def count_events() -> int:

@@ -1,0 +1,57 @@
+name: build-and-deploy
+
+# Builds the static event data and deploys the SPA to GitHub Pages.
+# Runs on push to main, on a schedule (data refresh), and manually.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 5 * * *"   # daily at 05:00 UTC
+  workflow_dispatch:
+
+# Permissions required to deploy to Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build event data (site/events.json)
+        run: python -m app.build_site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

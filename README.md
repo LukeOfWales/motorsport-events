@@ -1,13 +1,34 @@
 # Motorsport Events
 
-A local tool that aggregates UK motorsport events (AWDC, trials/RTV, rallying,
-hill climbs, off-road, Motorsport UK) into one calendar, ranked by distance
-from home (CF10 1EP) and filterable by discipline.
+Aggregates UK motorsport events (AWDC, trials/RTV, rallying, hill climbs,
+off-road, Motorsport UK, circuits) into one calendar, ranked by distance from a
+home postcode and filterable by discipline.
 
-Runs entirely on your machine: **DuckDB** for storage, **FastAPI** for the API,
-a small vanilla-JS calendar frontend. No cloud, no accounts required to run.
+It runs two ways from the same code:
 
-## Quick start
+- **Static SPA (recommended):** a Python build step scrapes the sources and
+  writes `site/events.json`; the browser SPA in `site/` does all
+  filtering/search/distance/mapping client-side. Deployed free to GitHub Pages
+  by a scheduled Action. No server at runtime.
+- **Local server app (original):** FastAPI + DuckDB serving a dynamic API. Kept
+  for local use; see "Local server app" below.
+
+## Static SPA
+
+Build the data and preview locally:
+
+```bash
+pip install -r requirements.txt
+python -m app.build_site          # writes site/events.json
+cd site && python3 -m http.server 8200   # open http://localhost:8200
+```
+
+The SPA (`site/index.html` + `app.js` + `style.css`) fetches `events.json`,
+geocodes your postcode via postcodes.io in the browser, and computes distances
+client-side. `.github/workflows/deploy.yml` rebuilds the data daily and deploys
+`site/` to GitHub Pages.
+
+## Quick start (local server app)
 
 ```bash
 python3 -m venv .venv
