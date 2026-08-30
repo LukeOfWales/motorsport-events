@@ -1,0 +1,38 @@
+# Forgejo Actions workflow — runs the test suite on push and PR.
+#
+# Forgejo Actions is largely GitHub-Actions-compatible, so this mirrors
+# .github/workflows/tests.yml. It runs on a registered forgejo-runner
+# (see docker-compose.forgejo.yml + docs/forgejo.md).
+#
+# The `ubuntu-latest` label maps to catthehacker/ubuntu:act-latest, which the
+# runner is registered with. That image has Python, git, pip and node (node is
+# required by JS actions such as actions/checkout).
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Python
+        run: python3 --version
+
+      - name: Create venv and install deps
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run tests
+        run: |
+          . .venv/bin/activate
+          pytest
