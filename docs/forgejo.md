@@ -37,19 +37,21 @@ Bypass in an emergency with `MSE_SKIP_HOOK=1 git push`.
 
 ## Local Forgejo instance
 
-Below is how to run a Forgejo instance and a runner locally so you can develop
-and execute these workflows offline. Requires Docker.
+Run a Forgejo instance and a runner locally to develop and execute these
+workflows offline. Requires Docker. The `make` targets wrap the Docker Compose
+commands.
 
-## 1. Start Forgejo
+### 1. Start Forgejo
 
 ```bash
-docker compose -f docker-compose.forgejo.yml up -d forgejo
+make forgejo-up
 ```
 
-Open http://localhost:3000 and complete the first-run install screen (SQLite is
-fine for local use), then register your admin user.
+This starts Forgejo, waits until it responds, and prints the next steps. Open
+http://localhost:3000 and complete the first-run install (SQLite is fine), then
+register your admin user.
 
-## 2. Push this repo to your local Forgejo
+### 2. Push this repo to your local Forgejo
 
 Create a repository in the Forgejo UI (e.g. `motorsport-events`), then add it as
 a second remote alongside GitHub (`origin`) and push:
@@ -59,43 +61,35 @@ git remote add forgejo http://localhost:3000/<you>/motorsport-events.git
 git push forgejo main
 ```
 
-You now have two remotes: `forgejo` (pre-GitHub CI) and `origin` (GitHub). Push
-to `forgejo` first, and to `origin` once it's green.
+### 3. Register and start a runner
 
-## 3. Register a runner
-
-Get a registration token from the UI:
-
-- Repo-level: `Settings -> Actions -> Runners -> Create new runner`
-- Or site-wide: `Site Administration -> Actions -> Runners`
-
-Register the runner once (it stores its config in `./.forgejo-runner`):
+Get a registration token from the UI (`Settings -> Actions -> Runners -> Create
+new runner`, or site-wide under Site Administration), then:
 
 ```bash
-docker compose -f docker-compose.forgejo.yml run --rm runner-register <TOKEN>
+make forgejo-register TOKEN=<token>   # one-off registration
+make forgejo-runner                   # start the runner daemon
 ```
 
-Then start the runner daemon:
+### 4. Trigger a run
+
+Push a commit (or open a PR) to `main` on the Forgejo remote. The workflow
+appears under the repo's **Actions** tab and runs the test suite in a
+`catthehacker/ubuntu:act-latest` container (Python + git + node + pip, matching
+the `ubuntu-latest` label the runner is registered with).
+
+### Other targets
 
 ```bash
-docker compose -f docker-compose.forgejo.yml up -d runner
+make forgejo-status   # container status
+make forgejo-logs     # tail Forgejo + runner logs
+make forgejo-down     # stop everything
 ```
-
-The runner uses the host Docker socket to spawn job containers, and advertises
-the `docker` label that the workflow's `runs-on: docker` targets.
-
-## 4. Trigger a run
-
-Push a commit (or open a PR) to `main`. The workflow appears under the repo's
-**Actions** tab and runs the test suite in a `catthehacker/ubuntu:act-latest`
-container (Python + git + node + pip, matching the `ubuntu-latest` label the
-runner is registered with).
 
 ## Notes
 
 - Data persists in `./.forgejo-data` (Forgejo) and `./.forgejo-runner` (runner
   config); both are git-ignored.
-- To stop everything: `docker compose -f docker-compose.forgejo.yml down`.
 - The workflow file is portable: the same steps run on GitHub Actions
   (`.github/workflows/tests.yml`) and Forgejo (`.forgejo/workflows/tests.yml`).
   Keeping both lets the project build on either forge.
