@@ -25,10 +25,7 @@ CREATE TABLE IF NOT EXISTS events (
     start_date   DATE NOT NULL,
     end_date     DATE,
     venue        VARCHAR,
-    town         VARCHAR,
     postcode     VARCHAR,
-    region       VARCHAR,
-    country      VARCHAR,
     latitude     DOUBLE,
     longitude    DOUBLE,
     distance_km  DOUBLE,
@@ -90,7 +87,7 @@ def _migrate(conn) -> None:
 # Column order used everywhere we read a full event row.
 _COLS = [
     "uid", "source", "source_id", "title", "discipline", "start_date",
-    "end_date", "venue", "town", "postcode", "region", "country",
+    "end_date", "venue", "postcode",
     "latitude", "longitude", "distance_km", "organiser", "url",
     "description", "fetched_at", "first_seen",
 ]
@@ -152,14 +149,14 @@ def upsert_events(events: Iterable[Event]) -> int:
             conn.execute(
                 """INSERT INTO events (
                     uid, source, source_id, title, discipline, start_date,
-                    end_date, venue, town, postcode, region, country,
+                    end_date, venue, postcode,
                     latitude, longitude, distance_km, organiser, url,
                     description, fetched_at, first_seen
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 [
                     e.uid, e.source, e.source_id, e.title, e.discipline.value,
-                    e.start_date, e.end_date, e.venue, e.town, e.postcode,
-                    e.region, e.country, lat, lon, dist, e.organiser, e.url,
+                    e.start_date, e.end_date, e.venue, e.postcode,
+                    lat, lon, dist, e.organiser, e.url,
                     e.description, e.fetched_at, first_seen,
                 ],
             )

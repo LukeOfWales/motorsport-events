@@ -47,10 +47,7 @@ class Event(BaseModel):
 
     # Location
     venue: Optional[str] = None
-    town: Optional[str] = None
     postcode: Optional[str] = None
-    region: Optional[str] = None
-    country: str = "United Kingdom"
 
     # Geocoded (filled in later); distance_km computed from home location.
     latitude: Optional[float] = None

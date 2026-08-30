@@ -7,3 +7,4 @@ python-dateutil>=2.9.0
 icalendar>=6.1.0
 pydantic>=2.11.0
 duckdb>=1.1.0
+schedule>=1.2.2

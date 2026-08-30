@@ -105,7 +105,7 @@ function visibleEvents() {
 function eventCard(ev) {
   const d = new Date(ev.start_date + "T00:00:00");
   const dist = ev.distance_km != null ? `${Math.round(ev.distance_km)} km` : "location TBC";
-  const loc = [ev.venue, ev.town].filter(Boolean).join(", ") || "";
+  const loc = ev.venue || "";
   const sources = sourceLabel(ev.source)
     + (ev.alt_sources && ev.alt_sources.length
         ? " \u00b7 also on " + ev.alt_sources.map(sourceLabel).join(", ")

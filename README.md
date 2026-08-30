@@ -24,6 +24,28 @@ uvicorn app.main:app --reload
 
 Re-run `python -m app.ingest` whenever you want to refresh events.
 
+## Keeping data fresh automatically
+
+Two options:
+
+1. Built-in scheduler (one long-lived process):
+
+   ```bash
+   python -m app.scheduler                 # refresh every 6 hours
+   MSE_REFRESH_HOURS=3 python -m app.scheduler
+   ```
+
+   It runs one ingest on startup, then repeats on the interval. Each run's
+   per-source result is recorded and shown in the app's "source status" panel
+   (and `GET /api/health`).
+
+2. cron / launchd (let the OS drive it):
+
+   ```cron
+   # every 6 hours, from the project directory, using its venv
+   0 */6 * * * cd /path/to/motorsport-events && .venv/bin/python -m app.ingest >> data/ingest.log 2>&1
+   ```
+
 ## Tests
 
 ```bash
