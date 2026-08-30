@@ -58,6 +58,18 @@ parsing runs offline and deterministically. Date-dependent logic is tested with
 `freezegun`, and the network/retry/pagination paths with `pytest-httpx`.
 Coverage is reported automatically (`pytest --cov` is on by default).
 
+### CI / pre-push
+
+A git pre-push hook runs the tests before any push (the "pre-GitHub" gate).
+Install it once after cloning:
+
+```bash
+./scripts/install-hooks.sh
+```
+
+CI runs on both GitHub Actions (`.github/workflows/`, authoritative) and a local
+Forgejo instance (`.forgejo/workflows/`, pre-GitHub). See `docs/forgejo.md`.
+
 When a source changes its markup and a parse test fails, re-capture its fixture
 (fetch the live page, save it over the old fixture) and update the expected
 counts/fields in `tests/test_adapters.py`.

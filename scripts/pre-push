@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Pre-push gate: run the test suite before code leaves the machine.
+#
+# Runs pytest in the project venv. Blocks the push if tests fail. This is the
+# "pre-GitHub" guard: broken code shouldn't reach the GitHub remote.
+#
+# Set MSE_SKIP_HOOK=1 to bypass in an emergency (e.g. pushing a WIP branch):
+#   MSE_SKIP_HOOK=1 git push
+#
+# Installed via scripts/install-hooks.sh (copies this to .git/hooks/pre-push).
+
+set -euo pipefail
+
+if [ "${MSE_SKIP_HOOK:-0}" = "1" ]; then
+    echo "pre-push: skipped (MSE_SKIP_HOOK=1)"
+    exit 0
+fi
+
+remote_name="${1:-}"
+echo "pre-push: running tests before pushing to '${remote_name}'..."
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+# Prefer the project venv; fall back to whatever python is on PATH.
+if [ -x ".venv/bin/pytest" ]; then
+    PYTEST=".venv/bin/pytest"
+elif command -v pytest >/dev/null 2>&1; then
+    PYTEST="pytest"
+else
+    echo "pre-push: pytest not found (activate the venv or 'pip install -r requirements-dev.txt')." >&2
+    exit 1
+fi
+
+if ! "$PYTEST" -q; then
+    echo >&2
+    echo "pre-push: tests FAILED — push aborted." >&2
+    echo "pre-push: fix the failures, or bypass with MSE_SKIP_HOOK=1 git push" >&2
+    exit 1
+fi
+
+echo "pre-push: tests passed."
+exit 0

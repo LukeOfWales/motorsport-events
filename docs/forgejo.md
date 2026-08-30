@@ -1,9 +1,41 @@
 # Local Forgejo Actions (CI) setup
 
-This project keeps a Forgejo Actions workflow at `.forgejo/workflows/tests.yml`,
-mirroring the GitHub Actions one. Forgejo Actions is largely GitHub-compatible,
-so the same workflow syntax works with minor differences (the runner label and
-container image).
+This project uses a two-stage CI flow:
+
+1. Pre-GitHub (local): a git **pre-push hook** runs the test suite before any
+   push, and a local **Forgejo** instance runs the workflow as a CI dashboard
+   you can iterate on before it reaches GitHub.
+2. GitHub (authoritative): `.github/workflows/tests.yml` runs on GitHub Actions
+   after you push to `origin`.
+
+The workflow at `.forgejo/workflows/tests.yml` mirrors the GitHub one, so the
+same checks run at both stages.
+
+## Recommended flow
+
+```
+edit code
+  -> git push forgejo main     # pre-push hook runs tests; Forgejo Actions runs
+  -> (green in Forgejo)
+  -> git push origin  main     # pre-push hook runs tests; GitHub Actions runs
+```
+
+The pre-push hook is the actual gate that stops broken code leaving the machine;
+Forgejo Actions gives you a CI dashboard/history and a place to develop workflow
+changes before they hit GitHub.
+
+## Pre-push hook
+
+Install it once after cloning (hooks aren't version-controlled):
+
+```bash
+./scripts/install-hooks.sh
+```
+
+Every `git push` then runs `pytest` first and aborts the push on failure.
+Bypass in an emergency with `MSE_SKIP_HOOK=1 git push`.
+
+## Local Forgejo instance
 
 Below is how to run a Forgejo instance and a runner locally so you can develop
 and execute these workflows offline. Requires Docker.
@@ -20,15 +52,15 @@ fine for local use), then register your admin user.
 ## 2. Push this repo to your local Forgejo
 
 Create a repository in the Forgejo UI (e.g. `motorsport-events`), then add it as
-a remote and push:
+a second remote alongside GitHub (`origin`) and push:
 
 ```bash
 git remote add forgejo http://localhost:3000/<you>/motorsport-events.git
 git push forgejo main
 ```
 
-Forgejo detects `.forgejo/workflows/` automatically once Actions is enabled
-(it is, via `FORGEJO__actions__ENABLED=true` in the compose file).
+You now have two remotes: `forgejo` (pre-GitHub CI) and `origin` (GitHub). Push
+to `forgejo` first, and to `origin` once it's green.
 
 ## 3. Register a runner
 
