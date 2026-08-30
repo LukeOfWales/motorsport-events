@@ -9,8 +9,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
-DB_PATH = Path(os.environ.get("MSE_DB_PATH", DATA_DIR / "events.duckdb"))
-
 # Default home location (override with the MSE_HOME_* env vars). This is a
 # neutral public default — Cardiff city centre — not anyone's home address.
 HOME_POSTCODE = os.environ.get("MSE_HOME_POSTCODE", "CF10 1EP")
@@ -20,10 +18,8 @@ HOME_LON = float(os.environ.get("MSE_HOME_LON", "-3.1791"))
 # Default "near me" radius in km.
 DEFAULT_RADIUS_KM = float(os.environ.get("MSE_RADIUS_KM", "150"))
 
-# Optional per-discipline radius overrides (km). You'll travel further for a
-# championship rally than a local trial. When a discipline isn't listed, the
-# request's radius (or DEFAULT_RADIUS_KM) applies. Applied server-side only
-# when the client asks for it (per_discipline_radius=true).
+# Optional per-discipline radius overrides (km), used by the SPA's "smart
+# radius" toggle — travel further for a championship rally than a local trial.
 DISCIPLINE_RADIUS_KM = {
     "rally": 300,
     "hillclimb": 200,

@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f docker-compose.forgejo.yml
 
-.PHONY: help install hooks test ingest scheduler serve build-site serve-site \
+.PHONY: help install hooks test build-site serve-site \
         forgejo-up forgejo-register forgejo-runner forgejo-logs forgejo-down forgejo-status
 
 help:  ## Show this help
@@ -23,15 +23,6 @@ hooks:  ## Install the git pre-push test hook
 
 test:  ## Run the test suite
 	. .venv/bin/activate && pytest
-
-ingest:  ## Refresh events from all sources
-	. .venv/bin/activate && python -m app.ingest
-
-scheduler:  ## Run the auto-refresh scheduler (foreground)
-	. .venv/bin/activate && python -m app.scheduler
-
-serve:  ## Run the web app (http://localhost:8000)
-	. .venv/bin/activate && uvicorn app.main:app --reload
 
 build-site:  ## Build the static SPA data (site/events.json)
 	. .venv/bin/activate && python -m app.build_site

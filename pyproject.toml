@@ -5,20 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "motorsport-events"
 version = "0.1.0"
-description = "Local-first UK motorsport event aggregator (rally, trials, hillclimb, off-road) with distance ranking from a home postcode."
+description = "Static-site UK motorsport event aggregator (rally, trials, hillclimb, off-road) with distance ranking from a home postcode."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.115.6",
-    "uvicorn[standard]>=0.34.0",
     "httpx>=0.28.1",
     "beautifulsoup4>=4.12.3",
     "lxml>=5.3.0",
     "python-dateutil>=2.9.0",
-    "icalendar>=6.1.0",
     "pydantic>=2.11.0",
-    "duckdb>=1.1.0",
-    "schedule>=1.2.2",
 ]
 
 [project.optional-dependencies]
@@ -30,8 +25,6 @@ dev = [
 ]
 
 [project.scripts]
-mse-ingest = "app.ingest:run"
-mse-scheduler = "app.scheduler:main"
 mse-build-site = "app.build_site:build"
 
 [tool.setuptools]
@@ -44,9 +37,7 @@ addopts = "-q --cov=app --cov-report=term-missing"
 
 [tool.coverage.run]
 omit = [
-    "app/adapters/ical.py",
-    "app/main.py",
-    "app/scheduler.py",
+    "app/build_site.py",
 ]
 [tool.coverage.report]
 exclude_lines = [

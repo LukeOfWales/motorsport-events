@@ -1,10 +1,5 @@
-fastapi>=0.115.6
-uvicorn[standard]>=0.34.0
 httpx>=0.28.1
 beautifulsoup4>=4.12.3
 lxml>=5.3.0
 python-dateutil>=2.9.0
-icalendar>=6.1.0
 pydantic>=2.11.0
-duckdb>=1.1.0
-schedule>=1.2.2

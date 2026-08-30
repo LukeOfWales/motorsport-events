@@ -15,9 +15,6 @@ from .msv import MSVAdapter
 from .pembrey import PembreyAdapter
 from .swlrc import SWLRCAdapter
 
-# .ical.ICalAdapter is a reusable template for any source that publishes an
-# iCal (.ics) feed; import and register it here if you find such a feed.
-
 
 def all_adapters() -> list[Adapter]:
     """Return the enabled adapters, in preference order.
@@ -34,8 +31,3 @@ def all_adapters() -> list[Adapter]:
         MSVAdapter(),
         PembreyAdapter(),
     ]
-
-
-def all_sources() -> list[dict]:
-    """Return {key, name} for each enabled source, for UI source filters."""
-    return [{"value": a.key, "label": a.name} for a in all_adapters()]

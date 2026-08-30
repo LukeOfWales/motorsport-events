@@ -1,16 +1,11 @@
 """Core data models for motorsport events."""
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date
 from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
-
-
-def _utcnow() -> datetime:
-    """Timezone-aware UTC now (replaces the deprecated datetime.utcnow())."""
-    return datetime.now(timezone.utc)
 
 
 class Discipline(str, Enum):
@@ -59,15 +54,9 @@ class Event(BaseModel):
     url: Optional[str] = None
     description: Optional[str] = None
 
-    # Bookkeeping
-    fetched_at: datetime = Field(default_factory=_utcnow)
-    # When this event was first seen by the aggregator (set once, preserved
-    # across re-scrapes). Powers "new since" highlighting.
-    first_seen: Optional[datetime] = None
-
-    # Populated at query time when duplicate events from other sources are
-    # merged into this one (e.g. an AWDC trial also listed by Motorsport UK).
-    # Each entry is a short source label. Empty when there are no duplicates.
+    # Populated during de-duplication when the same event is listed by other
+    # sources (e.g. an AWDC trial also on Motorsport UK). Each entry is a
+    # source key. Empty when there are no duplicates.
     alt_sources: list[str] = Field(default_factory=list)
 
     @property
