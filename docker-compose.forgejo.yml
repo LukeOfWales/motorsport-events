@@ -26,18 +26,22 @@ services:
       - ./.forgejo-data:/data
     restart: unless-stopped
 
-  # One-off registration: pass the runner token as the command argument.
-  #   docker compose -f docker-compose.forgejo.yml run --rm runner-register <TOKEN>
+  # One-off registration. The token is passed via the RUNNER_TOKEN env var:
+  #   make forgejo-register TOKEN=<token>
   runner-register:
     image: code.forgejo.org/forgejo/runner:6
     profiles: ["register"]
     depends_on: [forgejo]
-    entrypoint: ["forgejo-runner"]
-    command: ["register", "--no-interactive",
-              "--instance", "http://forgejo:3000",
-              "--name", "local-runner",
-              "--labels", "ubuntu-latest:docker://catthehacker/ubuntu:act-latest,docker:docker://catthehacker/ubuntu:act-latest",
-              "--token"]
+    environment:
+      RUNNER_TOKEN: "${RUNNER_TOKEN:-}"
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        forgejo-runner register --no-interactive
+        --instance http://forgejo:3000
+        --name local-runner
+        --labels "ubuntu-latest:docker://catthehacker/ubuntu:act-latest,docker:docker://catthehacker/ubuntu:act-latest"
+        --token "$${RUNNER_TOKEN}"
     volumes:
       - ./.forgejo-runner:/data
     networks: [default]
@@ -46,6 +50,10 @@ services:
     image: code.forgejo.org/forgejo/runner:6
     container_name: forgejo-runner
     depends_on: [forgejo]
+    # Run as root so the container can access the host Docker socket (used to
+    # spawn job containers). Without this the daemon gets 'permission denied'
+    # pinging /var/run/docker.sock.
+    user: root
     entrypoint: ["forgejo-runner", "daemon"]
     # The runner needs the host Docker socket to spawn job containers.
     volumes:

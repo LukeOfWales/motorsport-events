@@ -40,7 +40,7 @@ forgejo-up:  ## Start Forgejo and print next steps
 
 forgejo-register:  ## Register the runner: make forgejo-register TOKEN=<token>
 	@test -n "$(TOKEN)" || { echo "Usage: make forgejo-register TOKEN=<token>"; exit 1; }
-	$(COMPOSE) run --rm runner-register $(TOKEN)
+	RUNNER_TOKEN="$(TOKEN)" $(COMPOSE) run --rm runner-register
 
 forgejo-runner:  ## Start the runner daemon
 	$(COMPOSE) up -d runner
