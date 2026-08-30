@@ -19,8 +19,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # Forgejo resolves actions from code.forgejo.org's mirror, so we use a
+      # tag here (GitHub commit SHAs don't exist on that mirror). The GitHub
+      # workflows pin the same actions to SHAs for supply-chain hardening.
       - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@v4
 
       - name: Show Python
         run: python3 --version
