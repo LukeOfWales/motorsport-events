@@ -1,21 +1,38 @@
 # Motorsport Events
 
-Aggregates UK motorsport events (AWDC, trials/RTV, rallying, hill climbs,
-off-road, Motorsport UK, circuits) into one calendar, ranked by distance from a
-home postcode and filterable by discipline.
+Find upcoming UK motorsport events — **rally, trials/RTV, hill climbs, off-road
+and circuit racing** — aggregated from many sources into one calendar and
+ranked by distance from your postcode.
 
-It runs two ways from the same code:
+> **Live site:** _enable GitHub Pages (Settings → Pages → Source: GitHub
+> Actions), then add the URL here._
+
+<!-- Add a screenshot to make this pop:
+     ![Motorsport Events](docs/screenshot.png) -->
+_Screenshot: run the SPA locally (below) and drop a `docs/screenshot.png` in._
+
+## Features
+
+- Aggregates 7 sources (AWDC, ALRC, SWLRC, hillclimb.uk, Motorsport UK, MSV,
+  Pembrey) with cross-source de-duplication.
+- Distance ranking from any UK postcode (geocoded via postcodes.io).
+- List, month-calendar and map views.
+- Filter by discipline, source, distance, weekend-only, or free-text search.
+- "Smart radius" (travel further for a rally than a local trial), saved events,
+  new-event badges, and per-event / subscribable calendar (.ics) export.
+
+## How it runs
+
+One codebase, two modes:
 
 - **Static SPA (recommended):** a Python build step scrapes the sources and
-  writes `site/events.json`; the browser SPA in `site/` does all
+  writes `site/events.json`; the browser SPA does all
   filtering/search/distance/mapping client-side. Deployed free to GitHub Pages
-  by a scheduled Action. No server at runtime.
+  by a scheduled Action — no server at runtime.
 - **Local server app (original):** FastAPI + DuckDB serving a dynamic API. Kept
   for local use; see "Local server app" below.
 
-## Static SPA
-
-Build the data and preview locally:
+## Run the static SPA
 
 ```bash
 pip install -r requirements.txt

@@ -518,7 +518,9 @@ function showHealth() {
 
 // --- init ---------------------------------------------------------------
 async function init() {
-  state.data = await (await fetch("./events.json")).json();
+  const resp = await fetch("./events.json");
+  if (!resp.ok) throw new Error(`Couldn't load event data (${resp.status})`);
+  state.data = await resp.json();
   state.events = state.data.events;
 
   document.getElementById("generated").textContent =
@@ -587,5 +589,6 @@ async function init() {
 
 init().catch((err) => {
   document.getElementById("content").innerHTML =
-    `<p class="empty-msg">Failed to load: ${escapeHtml(err.message)}</p>`;
+    `<p class="empty-msg">Couldn't load events.<br>${escapeHtml(err.message)}<br>` +
+    `<small>If this persists, the daily data build may not have run yet.</small></p>`;
 });
