@@ -11,8 +11,8 @@ DATA_DIR.mkdir(exist_ok=True)
 
 DB_PATH = Path(os.environ.get("MSE_DB_PATH", DATA_DIR / "events.duckdb"))
 
-# Home location: CF10 1EP (Cardiff, South Wales).
-# Coordinates are approximate centre of the postcode district.
+# Default home location (override with the MSE_HOME_* env vars). This is a
+# neutral public default — Cardiff city centre — not anyone's home address.
 HOME_POSTCODE = os.environ.get("MSE_HOME_POSTCODE", "CF10 1EP")
 HOME_LAT = float(os.environ.get("MSE_HOME_LAT", "51.4816"))
 HOME_LON = float(os.environ.get("MSE_HOME_LON", "-3.1791"))

@@ -100,7 +100,7 @@ counts/fields in `tests/test_adapters.py`.
 ```
 adapters (per source)  ->  normalize to Event  ->  geocode postcode  ->  DuckDB
                                                           |
-                                          distance from CF10 1EP (haversine)
+                                          distance from home postcode (haversine)
                                                           |
                        FastAPI /api/events  ->  calendar frontend (list + month)
 ```
