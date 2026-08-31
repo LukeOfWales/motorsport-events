@@ -12,7 +12,7 @@ from .models import Event
 # Source preference for dedup: discipline-specific clubs win over the generic
 # aggregators, since their titles/venues are cleaner. Lower index = preferred.
 SOURCE_PRIORITY = [
-    "awdc", "alrc", "swlrc", "hillclimb_uk", "pembrey", "msv", "msuk",
+    "awdc", "alrc", "swlrc", "hillclimb_uk", "rallies_info", "pembrey", "msv", "msuk",
 ]
 
 

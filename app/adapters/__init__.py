@@ -13,6 +13,7 @@ from .hillclimb_uk import HillclimbUKAdapter
 from .msuk import MotorsportUKAdapter
 from .msv import MSVAdapter
 from .pembrey import PembreyAdapter
+from .rallies_info import RalliesInfoAdapter
 from .swlrc import SWLRCAdapter
 
 
@@ -30,4 +31,5 @@ def all_adapters() -> list[Adapter]:
         ALRCAdapter(),
         MSVAdapter(),
         PembreyAdapter(),
+        RalliesInfoAdapter(),
     ]
