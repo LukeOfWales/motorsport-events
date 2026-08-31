@@ -1,0 +1,59 @@
+name: Suggest an event source
+description: Suggest a UK motorsport calendar / events page to aggregate
+title: "[source] "
+labels: ["source-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a source! The more of this you can fill in, the
+        easier it is to write an adapter for it.
+  - type: input
+    id: name
+    attributes:
+      label: Source name
+      description: The club, series or venue.
+      placeholder: e.g. Pembrey Circuit
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Events page URL
+      description: The page listing the upcoming events.
+      placeholder: https://example.org/events
+    validations:
+      required: true
+  - type: dropdown
+    id: discipline
+    attributes:
+      label: Main discipline(s)
+      multiple: true
+      options:
+        - Trials / RTV
+        - Rally
+        - Hill Climb
+        - Off-Road
+        - Circuit / other
+    validations:
+      required: false
+  - type: dropdown
+    id: format
+    attributes:
+      label: Data format (if you know)
+      description: Structured feeds are much easier and more reliable to add.
+      options:
+        - Not sure
+        - iCal (.ics) feed
+        - JSON / API
+        - HTML page (scraped)
+        - PDF or image
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Region, whether it needs login, quirks, etc.
+    validations:
+      required: false
