@@ -1,14 +1,37 @@
 version: 2
 updates:
-  # Keep GitHub Actions versions current (would flag action runtime lag, e.g.
-  # the Node 20 -> 24 change).
+  # GitHub Actions used by the workflows.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: ci
+    groups:
+      # One PR for all non-major action updates.
+      actions-minor:
+        update-types:
+          - minor
+          - patch
 
   # Python dependencies (requirements*.txt).
   - package-ecosystem: pip
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - python
+    commit-message:
+      prefix: deps
+    groups:
+      # One PR for all non-major Python updates.
+      python-minor:
+        update-types:
+          - minor
+          - patch
