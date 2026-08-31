@@ -31,6 +31,13 @@ DISCIPLINE_KEYWORDS: list[tuple[str, Discipline]] = [
     ("winch", Discipline.OFF_ROAD),
     ("off road", Discipline.OFF_ROAD),
     ("off-road", Discipline.OFF_ROAD),
+    ("autograss", Discipline.OFF_ROAD),     # dirt oval racing
+    ("sand race", Discipline.OFF_ROAD),
+    ("sand track", Discipline.OFF_ROAD),
+    ("motocross", Discipline.OFF_ROAD),
+    ("moto cross", Discipline.OFF_ROAD),
+    ("motox", Discipline.OFF_ROAD),
+    ("enduro", Discipline.OFF_ROAD),
 
     # --- Trials / RTV ---
     ("rtvt", Discipline.TRIALS),            # RTV Trial
@@ -47,6 +54,7 @@ DISCIPLINE_KEYWORDS: list[tuple[str, Discipline]] = [
 
     # --- Broad rally catch-alls (after the specific off-road/trial terms) ---
     ("rally", Discipline.RALLY),
+    ("rali", Discipline.RALLY),             # Welsh spelling
     ("stage", Discipline.RALLY),
 
     # --- Explicitly Other (not a target discipline) ---

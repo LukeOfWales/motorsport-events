@@ -140,3 +140,25 @@ def test_pembrey_parses_sportsevent_ld():
     assert ev.discipline is Discipline.RALLY
     assert ev.postcode == "SA16 0HZ"
     assert ev.start_date.year == 2026
+
+
+# --- rallies.info (JSON feed) --------------------------------------------
+
+def test_rallies_info_parses_feed():
+    from app.adapters.rallies_info import RalliesInfoAdapter
+    events = RalliesInfoAdapter().parse(load("rallies_info.json"))
+    assert len(events) > 20
+    assert all(e.source == "rallies_info" and e.title for e in events)
+    # Cancelled events are filtered out.
+    assert not any("cancelled" in e.title.lower() for e in events)
+    # Date prefixes are stripped from titles.
+    assert not any(e.title.startswith(("1st", "2nd", "3rd")) for e in events)
+
+
+def test_rallies_info_classifies_disciplines():
+    from app.adapters.rallies_info import RalliesInfoAdapter
+    from app.models import Discipline
+    by_title = {e.title: e for e in RalliesInfoAdapter().parse(load("rallies_info.json"))}
+    # A stage/targa rally -> RALLY; a motocross/sand race -> OFF_ROAD.
+    assert any(e.discipline is Discipline.RALLY for e in by_title.values())
+    assert any(e.discipline is Discipline.OFF_ROAD for e in by_title.values())
