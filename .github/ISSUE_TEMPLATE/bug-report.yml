@@ -1,0 +1,37 @@
+name: Bug report
+description: Something isn't working (wrong data, broken source, UI issue)
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What's wrong?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Affected source / event (if applicable)
+      description: e.g. "Motorsport UK" or a specific event that looks wrong.
+    validations:
+      required: false
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where?
+      options:
+        - The live site (data / display)
+        - The build (python -m app.build_site)
+        - A specific adapter / parser
+        - Other
+    validations:
+      required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Browser, screenshots, error output, etc.
+    validations:
+      required: false
